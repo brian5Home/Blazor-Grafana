@@ -109,7 +109,7 @@ Overview of each application and service in the Blazor Grafana solution, with li
 
 **Purpose:** Log store. Receives logs from the OpenTelemetry Collector (OTLP). Queried by Grafana for log exploration.
 
-**Image:** `grafana/loki:2.9.4`  
+**Image:** `grafana/loki:3.0.0`  
 **Port:** 3100  
 **Config:** `docker/loki-config.yaml`  
 

@@ -40,15 +40,26 @@ Traces show the flow of requests: Blazor → API → database, with timing and s
 
 ### View logs (Loki)
 
-If you add OTLP log export from the apps later, logs will appear in Loki. With the current setup, Loki is connected and ready; you can still use it to explore and test.
+The Blazor app and API export **logs** via OpenTelemetry (OTLP) to the collector, which forwards them to Loki. Use Loki in Grafana to view these logs.
 
 1. In Grafana, open **Explore**.  
 2. At the top, choose the **Loki** data source.  
-3. **Log browser** or **Code** tab:  
-   - Try a simple query, e.g. `{job="varlogs"}` for default Loki logs, or use the **Log browser** to pick labels.  
-   - Set **Time range** and click **Run query**.  
+3. **Code** tab: run a LogQL query (see below).  
+4. Set **Time range** (e.g. “Last 15 minutes”) and click **Run query**.  
 
-When app logs are sent to Loki via the collector, you can query them by labels such as `service.name` (e.g. `{service_name="BlazorGrafanaApp.Api"}` or `{service_name="BlazorGrafanaApp.Blazor"}`). Loki is set as the **default** data source in this project.
+**Useful queries for app logs:**  
+- All logs from the API: `{service_name="BlazorGrafanaApp.Api"}` or `{job="BlazorGrafanaApp.Api"}`  
+- All logs from the Blazor app: `{service_name="BlazorGrafanaApp.Blazor"}` or `{job="BlazorGrafanaApp.Blazor"}`  
+- Both: `{service_name=~"BlazorGrafanaApp.(Api|Blazor)"}`  
+- Any app logs (if label names differ): `{job=~".+"}` or `{}` with a short time range  
+
+**If you don’t see logs:**  
+1. **Confirm the app is logging:** run `docker compose logs api` (or `docker compose logs blazorapp`). You should see OpenTelemetry log lines (e.g. “Listing all products”, “Generating report summary”). If not, the app isn’t emitting logs.  
+2. **Generate traffic:** open the Blazor app (Products, Reports), then in Grafana set the time range to “Last 5 minutes” and run the query again.  
+3. **No caching:** Loki and the collector do not cache log results; each query runs against stored data. Use “Last 5 minutes” or “Last 15 minutes” and click **Run query** again after generating new traffic.  
+4. **Loki 3.x + OTLP:** This stack uses Loki 3.x with native OTLP ingestion. The collector sends logs to Loki at `/otlp/v1/logs`. If you upgraded from Loki 2.x, run `docker compose up -d --force-recreate loki otel-collector` so both use the new setup.  
+
+Loki is set as the **default** data source in this project.
 
 ---
 

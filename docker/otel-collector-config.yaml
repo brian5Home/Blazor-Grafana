@@ -8,8 +8,8 @@ receivers:
 
 processors:
   batch:
-    timeout: 1s
-    send_batch_size: 1024
+    timeout: 200ms
+    send_batch_size: 512
 
 exporters:
   otlp/tempo:
@@ -17,6 +17,7 @@ exporters:
     tls:
       insecure: true
 
+  # Loki 3.x native OTLP (endpoint /otlp; collector sends to /otlp/v1/logs)
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
     tls:

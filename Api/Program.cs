@@ -1,10 +1,13 @@
 using BlazorGrafanaApp.Core.Data;
 using BlazorGrafanaApp.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var otlpEndpoint = builder.Configuration["Otlp:Endpoint"] ?? "http://otel-collector:4317";
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r.AddService("BlazorGrafanaApp.Api"))
@@ -13,10 +16,12 @@ builder.Services.AddOpenTelemetry()
         t.AddAspNetCoreInstrumentation();
         t.AddHttpClientInstrumentation();
         t.AddEntityFrameworkCoreInstrumentation(o => o.SetDbStatementForText = true);
-        t.AddOtlpExporter(o =>
-        {
-            o.Endpoint = new Uri(builder.Configuration["Otlp:Endpoint"] ?? "http://otel-collector:4317");
-        });
+        t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    })
+    .WithLogging(l =>
+    {
+        l.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+        l.AddConsoleExporter(); // so "docker compose logs api" shows logs; confirms provider is active
     });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -50,22 +55,26 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.MapGet("/api/products", async (AppDbContext db, CancellationToken ct) =>
+app.MapGet("/api/products", async (AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
+    logger.LogInformation("Listing all products");
     return await db.Products.OrderBy(p => p.Name).ToListAsync(ct);
 });
 
-app.MapGet("/api/products/{id:int}", async (int id, AppDbContext db, CancellationToken ct) =>
+app.MapGet("/api/products/{id:int}", async (int id, AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
     var product = await db.Products.FindAsync([id], ct);
-    return product is null ? Results.NotFound() : Results.Ok(product);
+    if (product is null) { logger.LogWarning("Product {ProductId} not found", id); return Results.NotFound(); }
+    logger.LogInformation("Returning product {ProductId} {Name}", product.Id, product.Name);
+    return Results.Ok(product);
 });
 
-app.MapPost("/api/products", async (Product product, AppDbContext db, CancellationToken ct) =>
+app.MapPost("/api/products", async (Product product, AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
     product.CreatedAt = DateTime.UtcNow;
     db.Products.Add(product);
     await db.SaveChangesAsync(ct);
+    logger.LogInformation("Created product {ProductId} {Name}", product.Id, product.Name);
     return Results.Created($"/api/products/{product.Id}", product);
 });
 
@@ -92,8 +101,9 @@ app.MapDelete("/api/products/{id:int}", async (int id, AppDbContext db, Cancella
     return Results.NoContent();
 });
 
-app.MapGet("/api/reports/summary", async (AppDbContext db, CancellationToken ct) =>
+app.MapGet("/api/reports/summary", async (AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
+    logger.LogInformation("Generating report summary");
     var totalProducts = await db.Products.CountAsync(ct);
     var byCategory = await db.Products
         .GroupBy(p => p.Category)
