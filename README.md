@@ -2,6 +2,8 @@
 
 A .NET 8 Blazor Server app with a Web API, SQL Server, OpenTelemetry, and a Grafana observability stack (Grafana, Loki, Tempo) running in Docker Compose.
 
+**Repository name:** Use **Blazor-Grafana** (correct spelling of *Grafana*). If your folder or repo is named "Blazor-Graphana", rename it to **Blazor-Grafana**.
+
 ## Credentials
 
 | Service     | URL / Target      | User   | Password           |
