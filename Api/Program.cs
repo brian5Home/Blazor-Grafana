@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +111,15 @@ app.MapGet("/api/reports/summary", async (AppDbContext db, ILogger<Program> logg
         .Select(g => new { Category = g.Key, Count = g.Count(), TotalValue = g.Sum(p => p.UnitPrice * p.StockQuantity) })
         .ToListAsync(ct);
     var lowStock = await db.Products.Where(p => p.StockQuantity < 10).CountAsync(ct);
+
+    Activity.Current?.SetTag("report.low_stock_count", lowStock);
+    Activity.Current?.SetTag("report.category.count", byCategory.Count);
+    foreach (var item in byCategory)
+    {
+        Activity.Current?.SetTag($"report.category.{item.Category}.count", item.Count);
+        Activity.Current?.SetTag($"report.category.{item.Category}.total_value", item.TotalValue);
+    }
+
     return Results.Ok(new
     {
         TotalProducts = totalProducts,
