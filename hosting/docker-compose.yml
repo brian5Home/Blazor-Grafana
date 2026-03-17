@@ -1,11 +1,11 @@
-name: blazor-grafana
+name: grafana-hosting
 
 services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.109.0
     command: ["--config=/etc/otel/config.yaml"]
     volumes:
-      - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
     ports:
       - "14317:4317"
       - "14318:4318"
@@ -17,7 +17,7 @@ services:
     image: grafana/tempo:2.3.1
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
-      - ./docker/tempo-config.yaml:/etc/tempo.yaml:ro
+      - ./tempo-config.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
       - "3200:3200"
@@ -27,7 +27,7 @@ services:
     image: grafana/loki:3.0.0
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./docker/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
     ports:
       - "3100:3100"
@@ -41,7 +41,7 @@ services:
       GF_SERVER_ROOT_URL: http://localhost:3000
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../docker/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
       - "3000:3000"
     depends_on:
