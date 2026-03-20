@@ -2,7 +2,9 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
       http:
+        endpoint: 0.0.0.0:4318
 
 exporters:
   loki:
@@ -16,25 +18,23 @@ exporters:
     tls:
       insecure: true
 
-  logging:
-    loglevel: info
+  debug:
+    verbosity: normal
 
 processors:
   batch:
-  resource:
-    attributes:
-      - key: service.name
-        action: upsert
-        value: "unknown-service"
 
 service:
+  telemetry:
+    logs:
+      level: debug
   pipelines:
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [loki, logging]
+      exporters: [loki, debug]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/tempo, logging]
+      exporters: [otlp/tempo]
 

@@ -7,8 +7,8 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
     ports:
-      - "14317:4317"
-      - "14318:4318"
+      - "24317:4317"
+      - "24318:4318"
     depends_on:
       - tempo
       - loki
@@ -21,7 +21,6 @@ services:
       - tempo_data:/var/tempo
     ports:
       - "3200:3200"
-      - "4317:4317"
 
   loki:
     image: grafana/loki:3.0.0
