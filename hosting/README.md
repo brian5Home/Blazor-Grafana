@@ -208,3 +208,56 @@ cd hosting
 docker compose down -v
 ```
 
+
+
+Here’s how OTLP HTTP/protobuf URLs work and how to set them.
+
+Default ports
+Protocol	Default port	Example base URL
+gRPC	4317	http://localhost:4317
+HTTP/protobuf	4318	http://localhost:4318
+Your code uses http://localhost:4317 (gRPC). For HTTP/protobuf you normally use port 4318 (or whatever your collector/backend exposes).
+
+How to get the exact URLs
+1. Local collector (e.g. OpenTelemetry Collector, Grafana Alloy)
+
+HTTP/protobuf is usually on port 4318.
+Base URL: http://<host>:4318
+The SDK adds paths like /v1/traces, /v1/logs, /v1/metrics; you only configure the base.
+2. Grafana Cloud
+
+In Grafana: Connections → Add new connection → OpenTelemetry.
+Copy the “OTLP Endpoint” URL and note “HTTP” vs “gRPC”.
+HTTP/protobuf URL looks like:
+https://otlp-gateway-prod-<region>.grafana.net/otlp
+(exact host depends on your stack/region).
+3. Self‑hosted Grafana (Grafana Stack)
+
+If you use Grafana Alloy or OTel Collector in front:
+Alloy HTTP OTLP: often http://<alloy-host>:4318.
+Check the receiver config (e.g. otlp/http) and the port you exposed.
+4. Other backends (Jaeger, Datadog, etc.)
+
+Use the “OTLP” or “OpenTelemetry” section of their docs; they’ll give a base URL and say whether it’s gRPC (4317) or HTTP (4318).
+In your app
+Use one base URL per protocol. For HTTP/protobuf:
+
+Set the base URL (e.g. http://localhost:4318 or your Grafana/collector URL).
+Set the protocol to HTTP/protobuf in code or config.
+Example using config and HTTP/protobuf in Startup.cs:
+
+Config (e.g. appsettings.json):
+
+{
+  "Otlp": {
+    "Endpoint": "http://localhost:4318",
+    "Protocol": "HttpProtobuf"
+  }
+}
+Summary:
+
+gRPC: base URL with port 4317 (e.g. http://localhost:4317).
+HTTP/protobuf: base URL with port 4318 (e.g. http://localhost:4318), or the HTTP URL your cloud/collector docs give.
+You only set the base URL; the SDK adds /v1/traces, /v1/logs, /v1/metrics.
+To use HTTP/protobuf in code, set o.Protocol = OtlpExportProtocol.HttpProtobuf and point o.Endpoint at that base URL (e.g. http://localhost:4318 or your Grafana/collector HTTP OTLP URL).
+
