@@ -1,5 +1,6 @@
 using BlazorGrafanaApp.Core.Data;
 using BlazorGrafanaApp.Core.Entities;
+using Api.Middleware;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -40,6 +41,7 @@ var app = builder.Build();
 
 app.UseCors();
 app.UseHttpsRedirection();
+app.UseMiddleware<ActivityTagMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -79,10 +81,14 @@ app.MapPost("/api/products", async (Product product, AppDbContext db, ILogger<Pr
     return Results.Created($"/api/products/{product.Id}", product);
 });
 
-app.MapPut("/api/products/{id:int}", async (int id, Product input, AppDbContext db, CancellationToken ct) =>
+app.MapPut("/api/products/{id:int}", async (int id, Product input, AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
     var product = await db.Products.FindAsync([id], ct);
-    if (product is null) return Results.NotFound();
+    if (product is null)
+    {
+        logger.LogWarning("Product {ProductId} not found for update", id);
+        return Results.NotFound();
+    }
     product.Name = input.Name;
     product.Description = input.Description;
     product.Category = input.Category;
@@ -90,15 +96,21 @@ app.MapPut("/api/products/{id:int}", async (int id, Product input, AppDbContext 
     product.StockQuantity = input.StockQuantity;
     product.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync(ct);
+    logger.LogInformation("Updated product {ProductId} {Name}", product.Id, product.Name);
     return Results.Ok(product);
 });
 
-app.MapDelete("/api/products/{id:int}", async (int id, AppDbContext db, CancellationToken ct) =>
+app.MapDelete("/api/products/{id:int}", async (int id, AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
     var product = await db.Products.FindAsync([id], ct);
-    if (product is null) return Results.NotFound();
+    if (product is null)
+    {
+        logger.LogWarning("Product {ProductId} not found for delete", id);
+        return Results.NotFound();
+    }
     db.Products.Remove(product);
     await db.SaveChangesAsync(ct);
+    logger.LogInformation("Deleted product {ProductId} {Name}", product.Id, product.Name);
     return Results.NoContent();
 });
 

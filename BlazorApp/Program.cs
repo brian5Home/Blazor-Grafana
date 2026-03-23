@@ -1,4 +1,5 @@
 using BlazorApp.Components;
+using BlazorApp.Services;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -21,7 +22,10 @@ builder.Services.AddOpenTelemetry()
     });
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://api:8080";
-builder.Services.AddHttpClient("Api", client => { client.BaseAddress = new Uri(apiBaseUrl); });
+builder.Services.AddSingleton<ActivityTagService>();
+builder.Services.AddTransient<ActivityTagHandler>();
+builder.Services.AddHttpClient("Api", client => { client.BaseAddress = new Uri(apiBaseUrl); })
+    .AddHttpMessageHandler<ActivityTagHandler>();
 builder.Services.AddScoped<BlazorApp.Services.ApiClient>();
 
 builder.Services.AddRazorComponents()
